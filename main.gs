@@ -358,10 +358,10 @@ loadGSTemplate = function() {
       }
       else {
         var now = DateUtils.now();
-        this.sheet.getRange("A1:L2").setValues([
+        this.sheet.getRange("A1:N2").setValues([
           [
             "出勤", "出勤更新", "退勤", "退勤更新", "休暇", "休暇取消",
-            "出勤中", "出勤なし", "休暇中", "休暇なし", "出勤確認", "退勤確認"
+            "出勤中", "出勤なし", "休暇中", "休暇なし", "出勤確認", "退勤確認", "報告","報告更新",
           ],
           [
             "<@#1> おはようございます (#2)", "<@#1> 出勤時間を#2へ変更しました",
@@ -369,7 +369,8 @@ loadGSTemplate = function() {
             "<@#1> #2を休暇として登録しました", "<@#1> #2の休暇を取り消しました",
             "#1が出勤しています", "全員退勤しています",
             "#1は#2が休暇です", "#1に休暇の人はいません",
-            "今日は休暇ですか？ #1", "退勤しましたか？ #1"
+            "今日は休暇ですか？ #1", "退勤しましたか？ #1",
+            "<@#1> 報告を記録しました", "<@#1> 報告を更新しました",
           ]
         ]);
       }
@@ -430,6 +431,7 @@ loadGSTimesheets = function () {
         { name: '日付' },
         { name: '出勤' },
         { name: '退勤' },
+        { name: '報告' },
         { name: 'ノート' },
       ],
       properties: [
@@ -487,17 +489,17 @@ loadGSTimesheets = function () {
       return v === '' ? undefined : v;
     });
 
-    return({ user: username, date: row[0], signIn: row[1], signOut: row[2], note: row[3] });
+    return({ user: username, date: row[0], signIn: row[1], signOut: row[2], report: row[3], note: row[3] });
   };
 
   GSTimesheets.prototype.set = function(username, date, params) {
     var row = this.get(username, date);
-    _.extend(row, _.pick(params, 'signIn', 'signOut', 'note'));
+    _.extend(row, _.pick(params, 'signIn', 'signOut', 'report', 'note'));
 
     var sheet = this._getSheet(username);
     var rowNo = this._getRowNo(username, date);
 
-    var data = [DateUtils.toDate(date), row.signIn, row.signOut, row.note].map(function(v) {
+    var data = [DateUtils.toDate(date), row.signIn, row.signOut, row.report, row.note].map(function(v) {
       return v == null ? '' : v;
     });
     sheet.getRange("A"+rowNo+":"+String.fromCharCode(65 + this.scheme.columns.length - 1)+rowNo).setValues([data]);
@@ -748,6 +750,7 @@ loadTimesheets = function (exports) {
       ['actionSignIn', /(モ[ー〜]+ニン|も[ー〜]+にん|おっは|おは|へろ|はろ|ヘロ|ハロ|hi|hello|morning|出勤)/],
       ['confirmSignIn', /__confirmSignIn__/],
       ['confirmSignOut', /__confirmSignOut__/],
+      ['actionReport',/(記録|日報|報告|内容)/],
     ];
 
     // メッセージを元にメソッドを探す
@@ -900,6 +903,14 @@ loadTimesheets = function (exports) {
     if(!_.isEmpty(users)) {
       this.responder.template("退勤確認", users.sort());
     }
+  };
+
+   // 報告
+  Timesheets.prototype.actionReport = function(username, message) {
+    var dateObj = DateUtils.toDate(DateUtils.now());
+    var reportStr = message.replace(/^(記録|日報|報告|内容)[\s:　]*/,"");
+    this.storage.set(username, dateObj, {report: reportStr});
+    this.responder.template("報告", username);
   };
 
   return Timesheets;

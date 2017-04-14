@@ -34,6 +34,7 @@ loadTimesheets = function (exports) {
       ['actionSignIn', /(モ[ー〜]+ニン|も[ー〜]+にん|おっは|おは|へろ|はろ|ヘロ|ハロ|hi|hello|morning|出勤)/],
       ['confirmSignIn', /__confirmSignIn__/],
       ['confirmSignOut', /__confirmSignOut__/],
+      ['actionReport',/(記録|日報|報告|内容)/],
     ];
 
     // メッセージを元にメソッドを探す
@@ -186,6 +187,14 @@ loadTimesheets = function (exports) {
     if(!_.isEmpty(users)) {
       this.responder.template("退勤確認", users.sort());
     }
+  };
+
+   // 報告
+  Timesheets.prototype.actionReport = function(username, message) {
+    var dateObj = DateUtils.toDate(DateUtils.now());
+    var reportStr = message.replace(/^(記録|日報|報告|内容)[\s:　]*/,"");
+    this.storage.set(username, dateObj, {report: reportStr});
+    this.responder.template("報告", username);
   };
 
   return Timesheets;
